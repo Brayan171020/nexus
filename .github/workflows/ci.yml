@@ -9,11 +9,20 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      CI: true
+      NODE_ENV: test
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/testdb"
+      REDIS_HOST: "localhost"
+      REDIS_PORT: "6379"
+      API_AUTH_ENABLED: "false"
+      AI_PROVIDER: "mock"
+      PORT: "3000"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 11.25.0
       - name: Setup Node.js
@@ -22,7 +31,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Typecheck
         run: pnpm exec tsc --noEmit
       - name: Unit tests with coverage
