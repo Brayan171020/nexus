@@ -2,7 +2,7 @@
 
 Este documento define el roadmap de ingeniería para evolucionar NexusTask-AI desde el scaffold inicial hacia un motor de procesamiento asíncrono, triage con IA, seguridad y operación observable.
 
-## Fase 1: Motor Asíncrono y Resiliencia de Tareas
+## [x] Fase 1: Motor Asíncrono y Resiliencia de Tareas
 
 ### Objetivo de negocio e ingeniería
 
@@ -27,7 +27,7 @@ Garantizar que la recepción de tareas sea rápida, desacoplada y resistente a f
 - Las métricas se validan con pruebas automatizadas y no exponen payloads sensibles.
 - Redis y PostgreSQL pueden reiniciarse sin corrupción de estados ni duplicación no controlada.
 
-## Fase 2: Motor de Triage y Extracción Estructurada con IA
+## [x] Fase 2: Motor de Triage y Extracción Estructurada con IA
 
 ### Objetivo de negocio e ingeniería
 
@@ -51,7 +51,7 @@ Convertir texto no estructurado en decisiones operativas consistentes: categorí
 - Se prueban casos positivos, respuestas malformadas, rate limits, timeouts y errores del proveedor.
 - El contrato de salida queda documentado en Swagger y es compatible con consumidores versionados.
 
-## Fase 3: Capa de Seguridad, Eventos en Tiempo Real y Auditoría
+## [x] Fase 3: Capa de Seguridad, Eventos en Tiempo Real y Auditoría
 
 ### Objetivo de negocio e ingeniería
 
@@ -75,7 +75,7 @@ Proteger el acceso al motor, ofrecer feedback inmediato a clientes y conservar u
 - No se almacenan secretos ni payloads sensibles sin redacción explícita.
 - Se cubren expiración, revocación, conexión perdida, reconexión y replay seguro de eventos.
 
-## Fase 4: Suite de Pruebas Automatizadas y CI/CD
+## [x] Fase 4: Suite de Pruebas Automatizadas y CI/CD
 
 ### Objetivo de negocio e ingeniería
 

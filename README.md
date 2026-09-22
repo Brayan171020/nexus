@@ -1,5 +1,7 @@
 # NexusTask-AI
 
+[![CI](https://github.com/Brayan171020/nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Brayan171020/nexus/actions/workflows/ci.yml) [![Coverage](https://img.shields.io/badge/coverage-Jest%20enabled-informational)](https://github.com/Brayan171020/nexus/actions) [![License](https://img.shields.io/badge/license-UNLICENSED-lightgrey.svg)](package.json) [![NestJS](https://img.shields.io/badge/NestJS-11-e0234e.svg)](https://nestjs.com/) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org/)
+
 > An asynchronous task-processing and AI triage engine designed for reliable intake, structured analysis, and operational workflow automation.
 
 ## Project Overview & Architecture
@@ -92,6 +94,22 @@ pnpm start:dev
 ```
 
 The API is available at `http://localhost:3000`. In development, TypeORM synchronizes the entity schema; production deployments must use reviewed migrations instead.
+
+### Automated tests
+
+Unit tests run entirely with mocked infrastructure:
+
+```bash
+pnpm test
+```
+
+The autonomous Supertest suite validates routing, versioning, validation, API-key authorization, task queries, metrics, and the public health endpoint without Neon or Redis credentials:
+
+```bash
+pnpm run test:e2e
+```
+
+For a local coverage report, run `pnpm test -- --coverage`.
 
 ## API Documentation
 
