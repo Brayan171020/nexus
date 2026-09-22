@@ -1,9 +1,9 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Get, Param } from '@nestjs/common';
-import { ApiBearerAuth, ApiAcceptedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiAcceptedResponse, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateTaskDto } from '../../dto/create-task.dto';
 import { TaskResponseDto } from '../../dto/task-response.dto';
-import { TaskEntity } from '../../entities/task.entity';
-import { TasksService } from '../../services/tasks.service';
+import { TaskMetricsDto } from '../../dto/task-metrics.dto';
+import { TaskMetrics, TasksService } from '../../services/tasks.service';
 
 @ApiTags('Tasks')
 @ApiBearerAuth()
@@ -19,9 +19,20 @@ export class TasksController {
     return this.tasksService.create(createTaskDto);
   }
 
+  @Get('metrics')
+  @ApiOperation({ summary: 'Get queue and persistence metrics' })
+  @ApiOkResponse({ type: TaskMetricsDto })
+  @ApiResponse({ status: 500, description: 'Infrastructure metrics unavailable' })
+  getMetrics(): Promise<TaskMetrics> {
+    return this.tasksService.getMetrics();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get task processing status and analysis' })
-  getById(@Param('id') id: string): Promise<TaskEntity> {
+  @ApiOkResponse({ type: TaskResponseDto })
+  @ApiResponse({ status: 404, description: 'Task not found' })
+  @ApiResponse({ status: 500, description: 'Unexpected server error' })
+  getById(@Param('id') id: string): Promise<TaskResponseDto> {
     return this.tasksService.getById(id);
   }
 }

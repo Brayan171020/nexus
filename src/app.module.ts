@@ -8,6 +8,7 @@ import { redisConfig } from './config/redis.config';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { AiTriageModule } from './modules/ai-triage/ai-triage.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AiTriageModule } from './modules/ai-triage/ai-triage.module';
     AiTriageModule,
     QueueModule,
     TasksModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

@@ -20,6 +20,14 @@ export interface AiAnalysis {
   recommendedAction: string;
 }
 
+export interface TaskErrorDetails {
+  name: string;
+  message: string;
+  stack?: string;
+  attempt: number;
+  failedAt: string;
+}
+
 @Entity({ name: 'tasks' })
 @Index(['status', 'createdAt'])
 export class TaskEntity {
@@ -46,6 +54,15 @@ export class TaskEntity {
 
   @Column({ type: 'int', default: 0 })
   retryCount!: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  errorDetails!: TaskErrorDetails | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  processedAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  failedAt!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
