@@ -4,7 +4,7 @@ import { Job, Queue } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { AiTriageService } from '../../ai-triage/services/ai-triage.service';
-import { TaskEntity, TaskErrorDetails, TaskStatus } from '../../tasks/entities/task.entity';
+import { TaskEntity, TaskErrorDetails, TaskPriority, TaskStatus } from '../../tasks/entities/task.entity';
 import { TaskJobData } from '../../tasks/services/tasks.service';
 
 @Injectable()
@@ -29,10 +29,11 @@ export class TaskProcessor extends WorkerHost {
       { status: TaskStatus.PROCESSING, retryCount: job.attemptsMade, errorDetails: null },
     );
     try {
-      const result = this.aiTriageService.analyze(task.title, task.rawPayload);
+      const result = await this.aiTriageService.analyze(task.title, task.rawPayload);
+      const priority = { LOW: TaskPriority.LOW, MEDIUM: TaskPriority.MEDIUM, HIGH: TaskPriority.HIGH, URGENT: TaskPriority.URGENT }[result.priority];
       await this.tasksRepository.update(
         { id: task.id, status: TaskStatus.PROCESSING },
-        { status: TaskStatus.COMPLETED, priority: result.priority, category: result.category, aiAnalysis: result.analysis, processedAt: new Date() },
+        { status: TaskStatus.COMPLETED, priority, category: result.category, aiAnalysis: result, processedAt: new Date() },
       );
     } catch (error: unknown) {
       const exhausted = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);

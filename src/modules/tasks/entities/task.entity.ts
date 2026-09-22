@@ -16,8 +16,9 @@ export enum TaskPriority {
 
 export interface AiAnalysis {
   summary: string;
-  sentiment: string;
+  sentiment: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'FRUSTRATED';
   recommendedAction: string;
+  slaHours: number;
 }
 
 export interface TaskErrorDetails {

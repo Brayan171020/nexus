@@ -17,7 +17,7 @@ describe('TaskProcessor', () => {
     increment: jest.fn().mockResolvedValue({ affected: 1 }),
   } as unknown as jest.Mocked<Repository<TaskEntity>>;
   const triage = {
-    analyze: jest.fn().mockReturnValue({ priority: TaskPriority.HIGH, category: 'technical', analysis: { summary: 'Failure', sentiment: 'negative', recommendedAction: 'Review' } }),
+    analyze: jest.fn().mockResolvedValue({ priority: TaskPriority.HIGH, category: 'technical', summary: 'Failure', sentiment: 'NEGATIVE', recommendedAction: 'Review', slaHours: 4 }),
   } as unknown as jest.Mocked<AiTriageService>;
   const dlq = { add: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<Queue<TaskJobData>>;
   let processor: TaskProcessor;
@@ -37,11 +37,12 @@ describe('TaskProcessor', () => {
     await processor.process(job(0));
 
     expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }), expect.objectContaining({ status: TaskStatus.COMPLETED }));
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }), expect.objectContaining({ aiAnalysis: expect.objectContaining({ summary: 'Failure', slaHours: 4 }) }));
     expect(dlq.add).not.toHaveBeenCalled();
   });
 
   it('increments retry count for a transient processing failure', async () => {
-    triage.analyze.mockImplementation(() => { throw new Error('temporary provider outage'); });
+    triage.analyze.mockRejectedValue(new Error('temporary provider outage'));
 
     await expect(processor.process(job(0))).rejects.toThrow('temporary provider outage');
     expect(repository.increment).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1', status: TaskStatus.PROCESSING }), 'retryCount', 1);
@@ -49,7 +50,7 @@ describe('TaskProcessor', () => {
   });
 
   it('marks exhausted jobs failed and sends them to the DLQ', async () => {
-    triage.analyze.mockImplementation(() => { throw new Error('permanent failure'); });
+    triage.analyze.mockRejectedValue(new Error('permanent failure'));
 
     await expect(processor.process(job(2))).rejects.toThrow('permanent failure');
     expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }), expect.objectContaining({ status: TaskStatus.FAILED, retryCount: 3 }));
