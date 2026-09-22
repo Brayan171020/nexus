@@ -4,6 +4,8 @@ import { AiTriageService } from '../../ai-triage/services/ai-triage.service';
 import { TaskEntity, TaskPriority, TaskStatus } from '../../tasks/entities/task.entity';
 import { TaskJobData } from '../../tasks/services/tasks.service';
 import { TaskProcessor } from './task.processor';
+import { AuditService } from '../../audit/services/audit.service';
+import { TasksGateway } from '../../realtime/tasks.gateway';
 
 describe('TaskProcessor', () => {
   const task: TaskEntity = {
@@ -20,6 +22,8 @@ describe('TaskProcessor', () => {
     analyze: jest.fn().mockResolvedValue({ priority: TaskPriority.HIGH, category: 'technical', summary: 'Failure', sentiment: 'NEGATIVE', recommendedAction: 'Review', slaHours: 4 }),
   } as unknown as jest.Mocked<AiTriageService>;
   const dlq = { add: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<Queue<TaskJobData>>;
+  const audit = { record: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<AuditService>;
+  const gateway = { emitStatusUpdated: jest.fn(), emitCompleted: jest.fn(), emitFailed: jest.fn() } as unknown as jest.Mocked<TasksGateway>;
   let processor: TaskProcessor;
 
   const job = (attemptsMade: number, attempts = 3): Job<TaskJobData> => ({
@@ -30,7 +34,7 @@ describe('TaskProcessor', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    processor = new TaskProcessor(repository, triage, dlq);
+    processor = new TaskProcessor(repository, triage, dlq, audit, gateway);
   });
 
   it('transitions a task to completed after successful triage', async () => {
@@ -39,6 +43,7 @@ describe('TaskProcessor', () => {
     expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }), expect.objectContaining({ status: TaskStatus.COMPLETED }));
     expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }), expect.objectContaining({ aiAnalysis: expect.objectContaining({ summary: 'Failure', slaHours: 4 }) }));
     expect(dlq.add).not.toHaveBeenCalled();
+    expect(gateway.emitCompleted).toHaveBeenCalledWith(expect.objectContaining({ taskId: 'task-1', status: TaskStatus.COMPLETED }));
   });
 
   it('increments retry count for a transient processing failure', async () => {
@@ -55,5 +60,6 @@ describe('TaskProcessor', () => {
     await expect(processor.process(job(2))).rejects.toThrow('permanent failure');
     expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }), expect.objectContaining({ status: TaskStatus.FAILED, retryCount: 3 }));
     expect(dlq.add).toHaveBeenCalledWith('failed-task', { taskId: 'task-1' }, expect.objectContaining({ jobId: 'dlq-task-1' }));
+    expect(gateway.emitFailed).toHaveBeenCalledWith(expect.objectContaining({ taskId: 'task-1', status: TaskStatus.FAILED }));
   });
 });

@@ -18,6 +18,7 @@ async function bootstrap(): Promise<void> {
     .addTag('Tasks', 'Task ingestion and lifecycle')
     .addTag('AI Triage', 'Structured task analysis')
     .addBearerAuth()
+    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'ApiKeyAuth')
     .build();
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig));
   await app.listen(process.env.PORT ?? 3000);

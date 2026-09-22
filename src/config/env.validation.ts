@@ -4,6 +4,8 @@ export const envValidationSchema = Joi.object({
   DATABASE_URL: Joi.string().uri({ scheme: ['postgresql', 'postgres'] }).required(),
   PORT: Joi.number().port().default(3000),
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
+  API_AUTH_ENABLED: Joi.boolean().default(false),
+  API_KEY_SECRET: Joi.when('API_AUTH_ENABLED', { is: true, then: Joi.string().min(32).required(), otherwise: Joi.string().allow('').optional() }),
   REDIS_HOST: Joi.string().hostname().default('localhost'),
   REDIS_PORT: Joi.number().port().default(6379),
   AI_PROVIDER: Joi.string().valid('mock', 'gemini').default('mock'),

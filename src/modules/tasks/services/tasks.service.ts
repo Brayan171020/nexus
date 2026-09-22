@@ -7,6 +7,9 @@ import { CreateTaskDto } from '../dto/create-task.dto';
 import { TaskResponseDto } from '../dto/task-response.dto';
 import { AiAnalysis, TaskEntity, TaskErrorDetails, TaskPriority, TaskStatus } from '../entities/task.entity';
 import { JobMetadata } from '../dto/task-response.dto';
+import { AuditService } from '../../audit/services/audit.service';
+import { TaskAuditEntity } from '../../audit/entities/task-audit.entity';
+import { TasksGateway } from '../../realtime/tasks.gateway';
 
 export interface TaskMetrics {
   waiting: number;
@@ -20,6 +23,7 @@ export interface TaskMetrics {
 
 export interface TaskJobData {
   taskId: string;
+  correlationId?: string;
 }
 
 @Injectable()
@@ -28,18 +32,23 @@ export class TasksService {
     @InjectRepository(TaskEntity) private readonly tasksRepository: Repository<TaskEntity>,
     @InjectQueue('tasks') private readonly tasksQueue: Queue<TaskJobData>,
     @InjectQueue('tasks-dlq') private readonly dlqQueue: Queue<TaskJobData>,
+    private readonly auditService: AuditService,
+    private readonly tasksGateway: TasksGateway,
   ) {}
 
-  async create(createTaskDto: CreateTaskDto): Promise<TaskResponseDto> {
+  async create(createTaskDto: CreateTaskDto, correlationId = 'unknown'): Promise<TaskResponseDto> {
     const task = this.tasksRepository.create({ ...createTaskDto, status: TaskStatus.PENDING, retryCount: 0 });
     const savedTask = await this.tasksRepository.save(task);
-    await this.tasksQueue.add('triage-task', { taskId: savedTask.id }, {
+    await this.auditService.record({ taskId: savedTask.id, previousStatus: null, newStatus: TaskStatus.PENDING, correlationId, action: 'TASK_CREATED' });
+    await this.tasksQueue.add('triage-task', { taskId: savedTask.id, correlationId }, {
       jobId: savedTask.id,
       attempts: 3,
       backoff: { type: 'exponential', delay: 2000, jitter: 0.5 },
       removeOnComplete: false,
       removeOnFail: false,
     });
+    await this.auditService.record({ taskId: savedTask.id, previousStatus: TaskStatus.PENDING, newStatus: TaskStatus.PENDING, correlationId, action: 'TASK_QUEUED', metadata: { queue: 'tasks' } });
+    this.tasksGateway.emitStatusUpdated({ taskId: savedTask.id, status: TaskStatus.PENDING, retryCount: savedTask.retryCount, timestamp: new Date().toISOString() });
     return {
       taskId: savedTask.id,
       status: savedTask.status,
@@ -48,6 +57,11 @@ export class TasksService {
       createdAt: savedTask.createdAt,
       updatedAt: savedTask.updatedAt,
     };
+  }
+
+  async getAudit(id: string): Promise<TaskAuditEntity[]> {
+    await this.getById(id);
+    return this.auditService.findByTaskId(id);
   }
 
   async getById(id: string): Promise<TaskResponseDto> {

@@ -3,6 +3,8 @@ import { Queue } from 'bullmq';
 import { Repository } from 'typeorm';
 import { TaskJobData, TasksService } from './tasks.service';
 import { TaskEntity, TaskStatus } from '../entities/task.entity';
+import { AuditService } from '../../audit/services/audit.service';
+import { TasksGateway } from '../../realtime/tasks.gateway';
 
 describe('TasksService', () => {
   const task: TaskEntity = {
@@ -26,18 +28,21 @@ describe('TasksService', () => {
   const dlq = {
     getJobCounts: jest.fn().mockResolvedValue({ waiting: 0, active: 0, completed: 0, failed: 1, delayed: 0 }),
   } as unknown as jest.Mocked<Queue<TaskJobData>>;
+  const audit = { record: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<AuditService>;
+  const gateway = { emitStatusUpdated: jest.fn() } as unknown as jest.Mocked<TasksGateway>;
   let service: TasksService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new TasksService(repository, queue, dlq);
+    service = new TasksService(repository, queue, dlq, audit, gateway);
   });
 
   it('persists a pending task and dispatches a resilient job', async () => {
     const response = await service.create({ title: 'Test task', rawPayload: 'payload' });
 
     expect(response).toMatchObject({ taskId: 'task-1', status: TaskStatus.PENDING, message: 'Task queued for processing' });
-    expect(queue.add).toHaveBeenCalledWith('triage-task', { taskId: 'task-1' }, expect.objectContaining({ attempts: 3, removeOnComplete: false, removeOnFail: false }));
+    expect(queue.add).toHaveBeenCalledWith('triage-task', expect.objectContaining({ taskId: 'task-1', correlationId: 'unknown' }), expect.objectContaining({ attempts: 3, removeOnComplete: false, removeOnFail: false }));
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'TASK_CREATED', correlationId: 'unknown' }));
   });
 
   it('returns a standardized not-found exception for an unknown task', async () => {

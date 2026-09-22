@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiTriageModule } from '../ai-triage/ai-triage.module';
 import { TaskEntity } from '../tasks/entities/task.entity';
 import { TaskProcessor } from './processors/task.processor';
+import { AuditModule } from '../audit/audit.module';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { TaskProcessor } from './processors/task.processor';
     ),
     TypeOrmModule.forFeature([TaskEntity]),
     AiTriageModule,
+    AuditModule,
+    RealtimeModule,
   ],
   providers: [TaskProcessor],
   exports: [BullModule],

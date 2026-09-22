@@ -9,6 +9,13 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { AiTriageModule } from './modules/ai-triage/ai-triage.module';
 import { HealthModule } from './modules/health/health.module';
+import { APP_GUARD } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
+import { ApiKeyGuard } from './common/guards/api-key.guard';
+import { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { AuditModule } from './modules/audit/audit.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -19,6 +26,13 @@ import { HealthModule } from './modules/health/health.module';
     QueueModule,
     TasksModule,
     HealthModule,
+    AuditModule,
+    RealtimeModule,
   ],
+  providers: [{ provide: APP_GUARD, useFactory: (config: ConfigService, reflector: Reflector) => new ApiKeyGuard(config, reflector), inject: [ConfigService, Reflector] }],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}
